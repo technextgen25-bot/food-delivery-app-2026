@@ -6,6 +6,8 @@ const { generateOtpCode, sendOtpSms } = require('../utils/otp');
 
 const router = express.Router();
 const OTP_EXPIRY_MINUTES = 5;
+// Rôles qu'un utilisateur peut choisir lui-même. ADMIN ne s'attribue jamais via l'API.
+const SELF_SERVICE_ROLES = ['CLIENT', 'RESTAURANT', 'DRIVER'];
 
 function generateToken(user) {
   return jwt.sign(
@@ -71,6 +73,7 @@ router.post(
     }
 
     const { phone, code, fullName, role } = req.body;
+    const safeRole = SELF_SERVICE_ROLES.includes(role) ? role : 'CLIENT';
 
     try {
       const otpRecord = await prisma.otpCode.findFirst({
@@ -98,7 +101,7 @@ router.post(
           data: {
             phone,
             fullName: fullName || null,
-            role: role || 'CLIENT',
+            role: safeRole,
             isVerified: true,
           },
         });

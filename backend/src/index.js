@@ -13,6 +13,9 @@ const driverRoutes = require('./routes/drivers');
 const adminRoutes = require('./routes/admin');
 
 const app = express();
+
+// Render place l'app derrière un proxy : nécessaire pour que le rate limit identifie les vraies IP
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
@@ -23,8 +26,10 @@ app.use(cors());
 app.use(express.json());
 
 // Limite le nombre de requêtes pour protéger contre les abus (ex: spam d'OTP)
-const otpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5 });
+const otpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
+const verifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 15 }); // freine le brute-force des codes à 6 chiffres
 app.use('/api/auth/request-otp', otpLimiter);
+app.use('/api/auth/verify-otp', verifyLimiter);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/restaurants', restaurantRoutes);
