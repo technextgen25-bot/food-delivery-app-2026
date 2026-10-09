@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "FoodDelivery Client",
+    "slug": "food-delivery-client",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#FF5A1F"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.example.fooddeliveryclient"
+    },
+    "android": {
+      "package": "com.example.fooddeliveryclient"
+    }
+  }
+}

@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CLIENT
+  RESTAURANT
+  DRIVER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  PREPARING
+  READY_FOR_PICKUP
+  PICKED_UP
+  ON_THE_WAY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CARD
+  CASH
+  MOBILE_WALLET
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id          String   @id @default(uuid())
+  phone       String   @unique
+  fullName    String?
+  email       String?  @unique
+  role        Role     @default(CLIENT)
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  addresses   Address[]
+  orders      Order[]         @relation("ClientOrders")
+  restaurant  Restaurant?
+  driver      Driver?
+  otpCodes    OtpCode[]
+}
+
+model OtpCode {
+  id        String   @id @default(uuid())
+  phone     String
+  code      String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    String?
+}
+
+model Address {
+  id        String   @id @default(uuid())
+  label     String
+  street    String
+  city      String
+  latitude  Float?
+  longitude Float?
+  isDefault Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  orders    Order[]
+}
+
+model Restaurant {
+  id          String     @id @default(uuid())
+  name        String
+  description String?
+  logoUrl     String?
+  bannerUrl   String?
+  address     String
+  city        String
+  latitude    Float?
+  longitude   Float?
+  isOpen      Boolean    @default(true)
+  isApproved  Boolean    @default(false)
+  rating      Float      @default(0)
+  commissionRate Float   @default(15)
+  owner       User       @relation(fields: [ownerId], references: [id])
+  ownerId     String     @unique
+  menuItems   MenuItem[]
+  orders      Order[]
+  createdAt   DateTime   @default(now())
+}
+
+model MenuCategory {
+  id           String     @id @default(uuid())
+  name         String
+  menuItems    MenuItem[]
+}
+
+model MenuItem {
+  id            String        @id @default(uuid())
+  name          String
+  description   String?
+  price         Float
+  imageUrl      String?
+  isAvailable   Boolean       @default(true)
+  restaurant    Restaurant    @relation(fields: [restaurantId], references: [id])
+  restaurantId  String
+  category      MenuCategory? @relation(fields: [categoryId], references: [id])
+  categoryId    String?
+  orderItems    OrderItem[]
+}
+
+model Driver {
+  id            String   @id @default(uuid())
+  user          User     @relation(fields: [userId], references: [id])
+  userId        String   @unique
+  vehicleType   String?
+  isAvailable   Boolean  @default(false)
+  isApproved    Boolean  @default(false)
+  currentLat    Float?
+  currentLng    Float?
+  rating        Float    @default(0)
+  orders        Order[]
+}
+
+model Order {
+  id              String        @id @default(uuid())
+  client          User          @relation("ClientOrders", fields: [clientId], references: [id])
+  clientId        String
+  restaurant      Restaurant    @relation(fields: [restaurantId], references: [id])
+  restaurantId    String
+  driver          Driver?       @relation(fields: [driverId], references: [id])
+  driverId        String?
+  deliveryAddress Address       @relation(fields: [addressId], references: [id])
+  addressId       String
+  items           OrderItem[]
+  status          OrderStatus   @default(PENDING)
+  subtotal        Float
+  deliveryFee     Float
+  commissionAmount Float        @default(0)
+  total           Float
+  paymentMethod   PaymentMethod
+  paymentStatus   PaymentStatus @default(PENDING)
+  statusHistory   OrderStatusLog[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model OrderItem {
+  id         String    @id @default(uuid())
+  order      Order     @relation(fields: [orderId], references: [id])
+  orderId    String
+  menuItem   MenuItem  @relation(fields: [menuItemId], references: [id])
+  menuItemId String
+  quantity   Int
+  unitPrice  Float
+  notes      String?
+}
+
+model OrderStatusLog {
+  id        String      @id @default(uuid())
+  order     Order       @relation(fields: [orderId], references: [id])
+  orderId   String
+  status    OrderStatus
+  createdAt DateTime    @default(now())
+}
