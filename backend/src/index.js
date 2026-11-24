@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+require('express-async-errors'); // propage les erreurs des routes async au gestionnaire d'erreurs
 const http = require('http');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -38,6 +39,12 @@ app.use('/api/drivers', driverRoutes);
 app.use('/api/admin', adminRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+
+// Gestionnaire d'erreurs : évite qu'une exception ne laisse la requête en suspens
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ message: 'Erreur serveur' });
+});
 
 // Socket.io : gestion des salons (rooms) pour cibler les notifications
 io.on('connection', (socket) => {

@@ -112,6 +112,25 @@ router.get('/mine', authenticate, requireRole('CLIENT'), async (req, res) => {
   res.json(orders);
 });
 
+// GET /api/orders/restaurant - commandes du restaurant du compte connecté
+// Doit être déclaré AVANT /:id
+router.get('/restaurant', authenticate, requireRole('RESTAURANT'), async (req, res) => {
+  const restaurant = await prisma.restaurant.findUnique({ where: { ownerId: req.user.userId } });
+  if (!restaurant) return res.json([]);
+
+  const orders = await prisma.order.findMany({
+    where: { restaurantId: restaurant.id },
+    include: {
+      items: { include: { menuItem: { select: { name: true } } } },
+      client: { select: { fullName: true, phone: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+  });
+
+  res.json(orders);
+});
+
 // GET /api/orders/:id - détail d'une commande (réservé aux personnes concernées)
 router.get('/:id', authenticate, async (req, res) => {
   const order = await prisma.order.findUnique({
@@ -176,7 +195,12 @@ router.patch('/:id/status', authenticate, requireRole('RESTAURANT', 'DRIVER', 'A
 
   const updated = await prisma.order.update({
     where: { id: req.params.id },
-    data: { status, statusHistory: { create: { status } } },
+    data: {
+      status,
+      statusHistory: { create: { status } },
+      // Paiement en espèces : considéré encaissé à la livraison
+      ...(status === 'DELIVERED' && order.paymentMethod === 'CASH' ? { paymentStatus: 'PAID' } : {}),
+    },
   });
 
   // Notifier le client en temps réel du changement de statut
